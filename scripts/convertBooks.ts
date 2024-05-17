@@ -119,8 +119,6 @@ export async function convertBooks(
     const collections = configData.data.bookCollections;
     /**map of docSets and frozen archives*/
     const freezer = new Map<string, any>();
-    /**array of catalog query promises*/
-    const catalogEntries: Promise<any>[] = [];
 
     const usedLangs = new Set<string>();
     //loop through collections
@@ -233,31 +231,18 @@ export async function convertBooks(
         //start freezing process and map promise to docSet name
         const frozen = freeze(pk);
         freezer.set(docSet, frozen[docSet]);
-        //start catalog generation process
-        catalogEntries.push(pk.gqlQuery(queries.catalogQuery({ cv: true })));
     }
-    //write catalog entries
-    const entries = await Promise.all(catalogEntries);
-    const catalogPath = path.join('static', 'collections', 'catalog');
-    if (!existsSync(catalogPath)) {
-        if (verbose) console.log('creating: ' + catalogPath);
-        mkdirSync(catalogPath, { recursive: true });
-    }
-    entries.forEach((entry) => {
-        writeFileSync(
-            path.join(catalogPath, entry.data.docSets[0].id + '.json'),
-            JSON.stringify(
-                postQueries.parseChapterVerseMapInDocSets({
-                    docSets: [entry.data.docSets[0]]
-                })[0]
-            )
-        );
-    });
     if (verbose) console.time('freeze');
     //write frozen archives for import
     //const vals = await Promise.all(freezer.values());
     //write frozen archives
     const files: any[] = [];
+
+    const collectionPath = path.join('static', 'collections');
+    if (!existsSync(collectionPath)) {
+        if (verbose) console.log('creating: ' + collectionPath);
+        mkdirSync(collectionPath, { recursive: true });
+    }
 
     //push files to be written to files array
     freezer.forEach((value, key) =>
